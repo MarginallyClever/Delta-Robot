@@ -9,10 +9,14 @@
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
-const int MAX_ANGLE = 12;
-const int MIN_ANGLE = -35;
-const int DIF_ANGLE = MAX_ANGLE+MIN_ANGLE/2;
-const int TOTAL_ANGLE = MAX_ANGLE-MIN_ANGLE;
+const int MAX_ANGLE    = 90+35;
+const int MIN_ANGLE    = 90-80;
+const int MIDDLE_ANGLE = (MAX_ANGLE+MIN_ANGLE)/2;
+const int HALF_RANGE   = (MAX_ANGLE-MIN_ANGLE)/2;
+const int NUM_ARMS     = 3;
+
+// Serial communication bitrate
+const long BAUD        = 57600;
 
 
 //------------------------------------------------------------------------------
@@ -22,29 +26,75 @@ const int TOTAL_ANGLE = MAX_ANGLE-MIN_ANGLE;
 
 
 //------------------------------------------------------------------------------
+// structures
+//------------------------------------------------------------------------------
+struct Arm {
+  Servo s;
+  float a;
+};
+
+
+//------------------------------------------------------------------------------
 // globals
 //------------------------------------------------------------------------------
-Servo s000,s120,s240;
+Arm arms[NUM_ARMS];
 
 
 //------------------------------------------------------------------------------
-// setup
-// runs once when board turns on/resets.  Initializes variables.
+// methods
 //------------------------------------------------------------------------------
+
+/**
+ * sets a servo to a given angle.
+ * @param angle [0...180].
+ */
+void moveArm(int id,float angle) {
+  if(angle>MAX_ANGLE) {
+    Serial.println(F("MAX_ANGLE"));
+    angle = MAX_ANGLE;
+  }
+  if(angle<MIN_ANGLE) {
+    Serial.println(F("MIN_ANGLE"));
+    angle = MIN_ANGLE;
+  }
+  Serial.print(id);
+  Serial.print(F("="));
+  Serial.print(angle);
+  
+  arms[id].a=angle;
+  // convert range 180-0 to 2000-1000
+  arms[id].s.writeMicroseconds((int)( (angle * 1000.0/180.0 ) + 1000.0));
+}
+
+
+/**
+ * write the position of each arm to the serial output
+ */
+void printState() {
+  int i;
+  for(i=0;i<NUM_ARMS;++i) {
+    if(i>0) Serial.print(F("\t"));
+    Serial.print(arms[i].a);
+  }
+  Serial.print(F("\n"));
+}
+
+
+/**
+ * runs once when board turns on/resets.  Initializes variables.
+ */
 void setup() {
   // start serial communications
-  Serial.begin(57600);
+  Serial.begin(BAUD);
   Serial.println(F("** START **"));
 
-  // connect to the servos
-  s000.attach(5);
-  s120.attach(4);
-  s240.attach(3);
-  
-  // center the servos
-  s000.write(90);
-  s120.write(90);
-  s240.write(90);
+  int i;
+  for(i=0;i<NUM_ARMS;++i) {
+    // connect to the servos
+    arms[i].s.attach(5-i);
+    // center the arm
+    moveArm(i,90);
+  }
   
   // I use this delay to unplug after the servos are centered.
   // Makes installing the biceps easier.
@@ -62,32 +112,22 @@ void setup() {
 }
 
 
-//------------------------------------------------------------------------------
-// runs over and over.  if loop() finishes then the board calls it again.
-// globals do not get reset if loop() ends.
-//------------------------------------------------------------------------------
+/**
+ * runs over and over.  if loop() finishes then the board calls it again. globals do not get reset if loop() ends.
+ */
 void loop() {
   float t = (float)millis()*0.001f;
   
   // sine curve from MIN_ANGLE to MAX_ANGLE over time.
   float speedup=2;
-  float x000 = 90 + DIF_ANGLE + sin( t*speedup               ) * TOTAL_ANGLE;
-  float x120 = 90 + DIF_ANGLE + sin( t*speedup +PI*2.0f/3.0f ) * TOTAL_ANGLE;
-  float x240 = 90 + DIF_ANGLE + sin( t*speedup +PI*4.0f/3.0f ) * TOTAL_ANGLE;
 
-  Serial.print(x000);
-  Serial.print(F("\t"));
-  Serial.print(x120);
-  Serial.print(F("\t"));
-  Serial.print(x240);
-  Serial.print(F("\n"));
+  int i;
+  for(i=0;i<NUM_ARMS;++i) {
+    Serial.print(i==0?F("\n"):F("\t"));
+    moveArm( i, (float)MIDDLE_ANGLE + sin( t*speedup + (PI*2.0)*(float)i/(float)NUM_ARMS ) * (float)HALF_RANGE );
+  }
   
-  // convert range 180-0 to 2000-1000
-  s000.writeMicroseconds((int)( (x000 * 1000.0/180.0 ) + 1000.0));
-  s120.writeMicroseconds((int)( (x120 * 1000.0/180.0 ) + 1000.0));
-  s240.writeMicroseconds((int)( (x240 * 1000.0/180.0 ) + 1000.0));
-  
-  delay(20);
+  delay(10);
 }
 
 

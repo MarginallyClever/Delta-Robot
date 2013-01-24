@@ -9,8 +9,8 @@
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
-const int MAX_ANGLE    = 90+12;
-const int MIN_ANGLE    = 90-35;
+const int MAX_ANGLE    = 90+35;
+const int MIN_ANGLE    = 90-80;
 const int NUM_ARMS     = 3;  // can be 3 or 4.
 
 // Serial communication bitrate
