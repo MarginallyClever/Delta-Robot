@@ -18,4 +18,4 @@ This robot works just as well upside down as right side up.
 
 Please visit "Marginally Clever":http://www.marginallyclever.com/shop/ for the accompanying hardware kit.
 
-Please visit "the wiki":https://github.com/i-make-robots/DeltaRobot/wiki for installation, troubleshooting, and more.
+Please visit "the wiki":https://github.com/i-make-robots/Delta-Robot/wiki for installation, troubleshooting, and more.
