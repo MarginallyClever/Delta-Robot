@@ -7,33 +7,47 @@
 
 
 //------------------------------------------------------------------------------
-const int MAX_ANGLE = 10;
-const int MIN_ANGLE = -20;
+// constants
+//------------------------------------------------------------------------------
+const int MAX_ANGLE = 12;
+const int MIN_ANGLE = -35;
 const int DIF_ANGLE = MAX_ANGLE+MIN_ANGLE/2;
 const int TOTAL_ANGLE = MAX_ANGLE-MIN_ANGLE;
 
 
 //------------------------------------------------------------------------------
+// includes
+//------------------------------------------------------------------------------
 #include <Servo.h>
 
 
+//------------------------------------------------------------------------------
+// globals
 //------------------------------------------------------------------------------
 Servo s000,s120,s240;
 
 
 //------------------------------------------------------------------------------
+// setup
+// runs once when board turns on/resets.  Initializes variables.
+//------------------------------------------------------------------------------
 void setup() {
+  // start serial communications
   Serial.begin(57600);
   Serial.println(F("** START **"));
 
-  s000.attach(4);
-  s120.attach(3);
-  s240.attach(2);
+  // connect to the servos
+  s000.attach(5);
+  s120.attach(4);
+  s240.attach(3);
   
+  // center the servos
   s000.write(90);
   s120.write(90);
   s240.write(90);
   
+  // I use this delay to unplug after the servos are centered.
+  // Makes installing the biceps easier.
   Serial.print(F("5..."));
   delay(1000);
   Serial.print(F("4..."));
@@ -49,12 +63,17 @@ void setup() {
 
 
 //------------------------------------------------------------------------------
+// runs over and over.  if loop() finishes then the board calls it again.
+// globals do not get reset if loop() ends.
+//------------------------------------------------------------------------------
 void loop() {
   float t = (float)millis()*0.001f;
   
-  float x000 = 90 + DIF_ANGLE + sin( t*0.500               ) * TOTAL_ANGLE;
-  float x120 = 90 + DIF_ANGLE + sin( t*0.250 +PI*1.0f/3.0f ) * TOTAL_ANGLE;
-  float x240 = 90 + DIF_ANGLE + sin( t*0.125 +PI*2.0f/3.0f ) * TOTAL_ANGLE;
+  // sine curve from MIN_ANGLE to MAX_ANGLE over time.
+  float speedup=2;
+  float x000 = 90 + DIF_ANGLE + sin( t*speedup               ) * TOTAL_ANGLE;
+  float x120 = 90 + DIF_ANGLE + sin( t*speedup +PI*2.0f/3.0f ) * TOTAL_ANGLE;
+  float x240 = 90 + DIF_ANGLE + sin( t*speedup +PI*4.0f/3.0f ) * TOTAL_ANGLE;
 
   Serial.print(x000);
   Serial.print(F("\t"));
@@ -63,9 +82,10 @@ void loop() {
   Serial.print(x240);
   Serial.print(F("\n"));
   
-  s000.writeMicroseconds((int)((x000 - 90.0)*500.0/45.0+1500.0));
-  s120.writeMicroseconds((int)((x120 - 90.0)*500.0/45.0+1500.0));
-  s240.writeMicroseconds((int)((x240 - 90.0)*500.0/45.0+1500.0));
+  // convert range 180-0 to 2000-1000
+  s000.writeMicroseconds((int)( (x000 * 1000.0/180.0 ) + 1000.0));
+  s120.writeMicroseconds((int)( (x120 * 1000.0/180.0 ) + 1000.0));
+  s240.writeMicroseconds((int)( (x240 * 1000.0/180.0 ) + 1000.0));
   
   delay(20);
 }
