@@ -3,7 +3,7 @@
 // dan@marginallycelver.com 2013 jan 23
 //------------------------------------------------------------------------------
 // Copyright at end of file.
-// please see http://www.github.com/i-make-robots/DeltaRobot for more information.
+// please see http://www.github.com/i-make-robots/Delta-Robot for more information.
 
 
 //------------------------------------------------------------------------------
