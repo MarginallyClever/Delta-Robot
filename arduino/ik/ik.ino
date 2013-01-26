@@ -23,10 +23,13 @@ const long BAUD        = 57600;
 // Maximum length of serial input message.
 const int MAX_BUF      = 64;
 
-#define TWOPI          (PI*2.0f)
-#define DEG2RAD        (PI/180.0f)
-#define RAD2DEG        (180.0f/PI)
-#define DELAY          (5)
+#define TWOPI            (PI*2.0f)
+#define DEG2RAD          (PI/180.0f)
+#define RAD2DEG          (180.0f/PI)
+#define DELAY            (5)
+
+// how far should we subdivide arcs into line segments?
+#define CM_PER_SEGMENT   (0.1)
 
 static const float center_to_shoulder = 5.753f;  // cm
 static const float shoulder_to_elbow  = 5;  // cm
@@ -57,6 +60,16 @@ float feed_rate=10;  // how fast the tool moves in cm/s
 //------------------------------------------------------------------------------
 // methods
 //------------------------------------------------------------------------------
+
+/**
+  * finds angle of dy/dx as a value from 0...2PI
+  * @return the angle
+  */
+float atan3(float dy,float dx) {
+  float a=atan2(dy,dx);
+  if(a<0) a=(PI*2.0)+a;
+  return a;
+}
 
 
 /**
@@ -93,33 +106,10 @@ void setup_robot() {
     // connect to the servos
     robot.arms[i].s.attach(5-i);
     // center the arm
-    moveArm(i,90);
+    robot.arms[i].s.writeMicroseconds(1500);
   }
   robot.default_height=bb;
   robot.ee.pos.z=bb;
-}
-
-
-/**
- * sets a servo to a given angle.
- * @param angle [0...180].
- */
-void moveArm(int id,float angle) {
-  if(angle>MAX_ANGLE) {
-    Serial.println(F("MAX_ANGLE"));
-    angle = MAX_ANGLE;
-  }
-  if(angle<MIN_ANGLE) {
-    Serial.println(F("MIN_ANGLE"));
-    angle = MIN_ANGLE;
-  }
-  Serial.print(id);
-  Serial.print(F("="));
-  Serial.println(angle);
-  
-  robot.arms[id].angle=angle;
-  // convert range 180-0 to 2000-1000
-  robot.arms[id].s.writeMicroseconds((int)( (angle * 1000.0/180.0 ) + 1000.0));
 }
 
 
@@ -130,8 +120,6 @@ void moveArm(int id,float angle) {
  */
 char outOfBounds(float x,float y,float z) {
   // test if the move is impossible
-  z+=robot.default_height;
-
   int error=0,i;
   Vector3 w, test(x,y,z);
   float len;
@@ -144,6 +132,18 @@ char outOfBounds(float x,float y,float z) {
     if(fabs(len) > shoulder_to_elbow) return 1;
   }
   return 0;
+}
+
+
+/**
+ * prints ee position
+ */
+void printEEPosition() {
+  Serial.print(robot.ee.pos.x);
+  Serial.print(F("\t"));
+  Serial.print(robot.ee.pos.y);
+  Serial.print(F("\t"));
+  Serial.println(robot.ee.pos.z);
 }
 
 
@@ -209,10 +209,12 @@ void ik() {
   
     // update servo to match the new IK data
     int nx=((new_angle)*(500.0f/90.0f)) + 1500;
-      Serial.print(new_angle);
-      Serial.print("\t");
-      Serial.print(nx);
-      Serial.print("\n");
+    
+    Serial.print(new_angle);
+    Serial.print("\t");
+    Serial.print(nx);
+    Serial.print("\n");
+    
     if(nx>2000) {
       Serial.println("over max");
       nx=2000;
@@ -222,7 +224,7 @@ void ik() {
       nx=1000;
     }
     if(arm.angle!=nx) {
-      //arm.s.writeMicroseconds(nx);
+      arm.s.writeMicroseconds(nx);
       arm.angle=nx;
     }
   }
@@ -231,6 +233,9 @@ void ik() {
 
 /**
  * moving the tool in a straight line
+ * @param destination x coordinate
+ * @param destination y coordinate
+ * @param destination z coordinate
  */
 void line(float x, float y, float z) {
   if( outOfBounds(x, y, z) ) {
@@ -256,6 +261,8 @@ void line(float x, float y, float z) {
   Serial.print(F("feed="));
   Serial.println(feed_rate);
   
+  //printEEPosition();
+  
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
   float f;
   // until the interpolation finishes...
@@ -268,8 +275,51 @@ void line(float x, float y, float z) {
     f = (float)(time_now - start_time) / travel_time;
     robot.ee.pos = dp * f + start;
   
+    //printEEPosition();
+
     // update the inverse kinematics
     ik();
+    
+    delay(5);
+  }
+  
+  // one last time to make sure we hit right on the money
+  robot.ee.pos = destination;
+  // update the inverse kinematics
+  ik();
+}
+
+
+/**
+ * subdivides a line into shorter segments for straighter motion
+ * @param destination x coordinate
+ * @param destination y coordinate
+ * @param destination z coordinate
+ */
+static void line_safe(float x,float y,float z) {
+  // split up long lines to make them straighter?
+  float dx=x-robot.ee.pos.x;
+  float dy=y-robot.ee.pos.y;
+
+  float len=sqrt(dx*dx+dy*dy);
+  
+  if(len<=CM_PER_SEGMENT) {
+    line(x,y,z);
+    return;
+  }
+  
+  // too long!
+  long pieces=ceil(len/CM_PER_SEGMENT);
+  float x0=robot.ee.pos.x;
+  float y0=robot.ee.pos.y;
+  float z0=robot.ee.pos.z;
+  float a;
+  for(int j=0;j<=pieces;++j) {
+    a=(float)j/(float)pieces;
+
+    line((x-x0)*a+x0,
+         (y-y0)*a+y0,
+         (z-z0)*a+z0);
   }
 }
 
@@ -284,24 +334,45 @@ void line(float x, float y, float z) {
  * @param dy end of arc
  * @param dz end of arc
  */
-void arc(char cw,float cx,float cy,float cz,float dx,float dy,float dz) {
-  Vector3 c(cx,cy,robot.ee.pos.z);
-  Vector3 d(dx,dy,robot.ee.pos.z);
-  Vector3 p(robot.ee.pos);
-  float r=(p-c).Length();  // radius
+void arc(char cw,float cx,float cy,float cz,float x,float y,float z) {
+  // get radius
+  float dx = robot.ee.pos.x - cx;
+  float dy = robot.ee.pos.y - cy;
+  float radius = sqrt(dx*dx+dy*dy);
+
+  // find angle of arc (sweep)
+  float angle1 = atan3(dy,dx);
+  float angle2 = atan3(y-cy,x-cx);
+  float theta = angle2 - angle1;
   
-  // is the center accurate - same distance to both ends of the arc
-  if(fabs(r - (d-c).Length()) >0.001f) {
-    Serial.println("Invalid.");
-    return;
+  if(cw>0 && theta<0) angle2 += TWOPI;
+  else if(cw<0 && theta>0) angle1 += TWOPI;
+  
+  theta = angle2 - angle1;
+  
+  // get length of arc
+  // float circ=PI*2.0*radius;
+  // float len=theta*circ/(PI*2.0);
+  // simplifies to
+  float len = abs(theta) * radius;
+
+  int i, segments = floor( len / CM_PER_SEGMENT );
+ 
+  float nx, ny, nz, angle3, scale;
+
+  for(i=0;i<segments;++i) {
+    // interpolate around the arc
+    scale = ((float)i)/((float)segments);
+    
+    angle3 = ( theta * scale ) + angle1;
+    nx = cx + cos(angle3) * radius;
+    ny = cy + sin(angle3) * radius;
+    nz = ( z - robot.ee.pos.z ) * scale + robot.ee.pos.z;
+    // send it to the planner
+    line(nx,ny,nz);
   }
   
-  // @TODO: Does the arc go out of bounds?  What are the bounds?
-
-  // the arc is ok, go ahead.
-  
-  // @TODO: break the arc into many small straight lines, and call line()
-  line(dx,dy,dz);
+  line(x,y,z);
 }
 
 
@@ -311,16 +382,13 @@ void arc(char cw,float cx,float cy,float cz,float dx,float dy,float dz) {
 void processCommand() {
   if(!strncmp(buffer,"M114",4)) {
     // get position
-    Serial.print(robot.ee.pos.x);
-    Serial.print(", ");
-    Serial.print(robot.ee.pos.y);
-    Serial.print(", ");
-    Serial.println(robot.ee.pos.z-robot.default_height);
+    printEEPosition();
   } else if( !strncmp(buffer,"G00",3) || !strncmp(buffer,"G01",3) ) {
     // line
     float xx=robot.ee.pos.x;
     float yy=robot.ee.pos.y;
     float zz=robot.ee.pos.z-robot.default_height;
+    float ff=feed_rate;
 
     char *ptr=buffer;
     while(ptr && ptr<buffer+sofar) {
@@ -329,20 +397,23 @@ void processCommand() {
       case 'X': xx=atof(ptr+1);  Serial.print('x'); Serial.println(xx); break;
       case 'Y': yy=atof(ptr+1);  Serial.print('y'); Serial.println(yy); break;
       case 'Z': zz=atof(ptr+1);  Serial.print('z'); Serial.println(zz); break;
+      case 'F': ff=atof(ptr+1);  Serial.print('f'); Serial.println(ff); break;
       default: ptr=0; break;
       }
     }
     
-    line(xx,yy,zz);
+    feed_rate=ff;    
+    line_safe(xx,yy,zz+robot.default_height);
   } else if( !strncmp(buffer,"G02",3) || !strncmp(buffer,"G03",3) ) {
     // arc
     float xx=robot.ee.pos.x,
           yy=robot.ee.pos.y,
-          zz=robot.ee.pos.z,
+          zz=robot.ee.pos.z-robot.default_height,
           aa=robot.ee.pos.x,
           bb=robot.ee.pos.y,
-          cc=robot.ee.pos.z;
+          cc=robot.ee.pos.z-robot.default_height;
     char ww= !strncmp(buffer,"G02",3);
+    float ff=feed_rate;
 
     char *ptr=buffer;
     while(ptr && ptr<buffer+sofar) {
@@ -354,11 +425,14 @@ void processCommand() {
       case 'A': aa=atof(ptr+1);  Serial.print('a'); Serial.println(aa); break;
       case 'B': bb=atof(ptr+1);  Serial.print('b'); Serial.println(bb); break;
       case 'C': bb=atof(ptr+1);  Serial.print('c'); Serial.println(cc); break;
+      case 'F': ff=atof(ptr+1);  Serial.print('f'); Serial.println(ff); break;
       default: ptr=0; break;
       }
     }
     
-    arc(ww,aa,bb,cc,xx,yy,zz);
+    feed_rate=ff;    
+    arc(ww,aa,bb,cc+robot.default_height,
+           xx,yy,zz+robot.default_height);
   }
 }
 
