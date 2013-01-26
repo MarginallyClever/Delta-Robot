@@ -29,7 +29,8 @@ const int MAX_BUF      = 64;
 #define DELAY            (5)
 
 // how far should we subdivide arcs into line segments?
-#define CM_PER_SEGMENT   (0.1)
+#define CM_PER_SEGMENT   (0.50)
+#define MIN_FEED_RATE    (0.01)  // cm/s
 
 static const float center_to_shoulder = 5.753f;  // cm
 static const float shoulder_to_elbow  = 5;  // cm
@@ -209,12 +210,12 @@ void ik() {
   
     // update servo to match the new IK data
     int nx=((new_angle)*(500.0f/90.0f)) + 1500;
-    
+/*
     Serial.print(new_angle);
     Serial.print("\t");
     Serial.print(nx);
     Serial.print("\n");
-    
+//*/    
     if(nx>2000) {
       Serial.println("over max");
       nx=2000;
@@ -253,15 +254,15 @@ void line(float x, float y, float z) {
   // save the start time of this move so we can interpolate linearly over time.
   long start_time = millis();
   long time_now = start_time;
-
+/*
   Serial.print(F("length="));
   Serial.println(dp.Length());
   Serial.print(F("time="));
   Serial.println(travel_time);
   Serial.print(F("feed="));
   Serial.println(feed_rate);
-  
-  //printEEPosition();
+  printEEPosition();
+  */
   
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
   float f;
@@ -280,7 +281,7 @@ void line(float x, float y, float z) {
     // update the inverse kinematics
     ik();
     
-    delay(5);
+    delay(DELAY);
   }
   
   // one last time to make sure we hit right on the money
@@ -377,6 +378,17 @@ void arc(char cw,float cx,float cy,float cz,float x,float y,float z) {
 
 
 /**
+ * displays help message
+ */
+void help() {
+  Serial.println(F("== DELTA ROBOT - http://github.com/i-make-robots/Delta-Robot/ =="));
+  Serial.println(F("All commands end with a semi-colon."));
+  Serial.println(F("I understand the following Gcode (http://en.wikipedia.org/wiki/G-code):"));
+  Serial.println(F("G00,G01,G02,G03,M114"));
+}
+
+
+/**
  * process instructions waiting in the serial buffer
  */
 void processCommand() {
@@ -402,6 +414,7 @@ void processCommand() {
       }
     }
     
+    if(feed_rate < MIN_FEED_RATE) feed_rate=MIN_FEED_RATE;
     feed_rate=ff;    
     line_safe(xx,yy,zz+robot.default_height);
   } else if( !strncmp(buffer,"G02",3) || !strncmp(buffer,"G03",3) ) {
@@ -430,6 +443,7 @@ void processCommand() {
       }
     }
     
+    if(feed_rate < MIN_FEED_RATE) feed_rate=MIN_FEED_RATE;
     feed_rate=ff;    
     arc(ww,aa,bb,cc+robot.default_height,
            xx,yy,zz+robot.default_height);
@@ -474,11 +488,13 @@ void setup() {
   sofar=0;
   // start serial communications
   Serial.begin(BAUD);
-  Serial.println(F("** START **"));
+  Serial.print(F("\n\nHELLO WORLD! I AM A DELTA ROBOT."));
 
   setup_robot();
   // @TODO: Is this necessary?
   //line(0,0,0);
+  
+  help();
   
   Serial.print(F("> "));
   start = millis();
@@ -490,7 +506,6 @@ void setup() {
  */
 void loop() {
   listenToSerial();
-  delay(20);
 }
 
 
