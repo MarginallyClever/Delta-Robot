@@ -6,12 +6,17 @@
 // please see http://www.github.com/i-make-robots/Delta-Robot for more information.
 
 
+#include "Vector3.h"
+#include "Joint.h"
+#include "Arm.h"
+#include "DeltaRobot.h"
+#include <Servo.h>
+
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
 const int MAX_ANGLE    = 90+35;
 const int MIN_ANGLE    = 90-80;
-const int NUM_ARMS     = 3;  // can be 3 or 4.
 
 // Serial communication bitrate
 const long BAUD        = 57600;
@@ -32,38 +37,7 @@ static const float effector_to_wrist  = 1.59258f;  // cm
 //------------------------------------------------------------------------------
 // includes
 //------------------------------------------------------------------------------
-#include <Servo.h>
-
-
-//------------------------------------------------------------------------------
-class Joint {
-public:
-  Vector3 up;
-  Vector3 left;
-  Vector3 forward;
-  Vector3 pos;
-  Vector3 relative;
-};
-
-
-//------------------------------------------------------------------------------
-struct Arm {
-  Joint shoulder;
-  Joint elbow;
-  Joint wrist;
-  Joint wop;
-  Servo s;
-  int angle;
-};
-
-
-//------------------------------------------------------------------------------
-struct Delta3 {
-  Arm arms[NUM_ARMS];
-  Joint ee;
-  Joint base;
-  float default_height;
-};
+#include "DeltaRobot.h"
 
 
 //------------------------------------------------------------------------------
@@ -76,7 +50,7 @@ double dt;
 char buffer[MAX_BUF];
 int sofar;
 
-Delta3 robot;
+DeltaRobot robot;
 float feed_rate=10;  // how fast the tool moves in cm/s
 
 
@@ -93,7 +67,7 @@ void setup_robot() {
   float aa,bb,cc;
   int i;
 
-  for(i=0;i<3;++i) {
+  for(i=0;i<NUM_ARMS;++i) {
     Arm &a=robot.arms[i];
     // shoulder
     a.shoulder.pos=Vector3(cos(TWOPI*i/NUM_ARMS)*center_to_shoulder,  
@@ -115,6 +89,11 @@ void setup_robot() {
     a.elbow.relative=a.elbow.pos;
     a.wrist.relative=a.wrist.pos;
     a.wrist.relative.z=0;
+    
+    // connect to the servos
+    robot.arms[i].s.attach(5-i);
+    // center the arm
+    moveArm(i,90);
   }
   robot.default_height=bb;
   robot.ee.pos.z=bb;
@@ -149,14 +128,14 @@ void moveArm(int id,float angle) {
  * @param test the point to test
  * @return 1=out of bounds (fail), 0=in bounds (pass)
  */
-char outOfBounds(Vector3 test) {
+char outOfBounds(float x,float y,float z) {
   // test if the move is impossible
-  test.z+=robot.default_height;
+  z+=robot.default_height;
 
   int error=0,i;
-  Vector3 w;
+  Vector3 w, test(x,y,z);
   float len;
-  for(i=0;i<3;++i) {
+  for(i=0;i<NUM_ARMS;++i) {
     Arm &arm=robot.arms[i];
     // get wrist position
     w = test + arm.wrist.relative - arm.shoulder.pos;
@@ -174,7 +153,7 @@ char outOfBounds(Vector3 test) {
 void ik() {
   // find wrist positions
   int i;
-  for(i=0;i<3;++i) {
+  for(i=0;i<NUM_ARMS;++i) {
     Arm &arm=robot.arms[i];
 
     // get wrist position
@@ -226,7 +205,26 @@ void ik() {
     if(new_angle>90) new_angle=90;
     if(new_angle<-90) new_angle=-90;
 
-    // we don't care about elbow angle, but we could find it here if we needed it.    
+    // we don't care about elbow angle, but we could find it here if we needed it.
+  
+    // update servo to match the new IK data
+    int nx=((new_angle)*(500.0f/90.0f)) + 1500;
+      Serial.print(new_angle);
+      Serial.print("\t");
+      Serial.print(nx);
+      Serial.print("\n");
+    if(nx>2000) {
+      Serial.println("over max");
+      nx=2000;
+    }
+    if(nx<1000) {
+      Serial.println("under min");
+      nx=1000;
+    }
+    if(arm.angle!=nx) {
+      //arm.s.writeMicroseconds(nx);
+      arm.angle=nx;
+    }
   }
 }
 
@@ -234,27 +232,34 @@ void ik() {
 /**
  * moving the tool in a straight line
  */
-void line(float x,float y,float z) {
-  Vector3 destination(x,y,z);
-
-  if(outOfBounds(destination)) {
+void line(float x, float y, float z) {
+  if( outOfBounds(x, y, z) ) {
     Serial.println("Out of bounds.");
     return;
   }
 
   // how long does it take to reach destination at speed feed_rate?
+  Vector3 destination(x,y,z);
   Vector3 start = robot.ee.pos;  // keep a copy of start for later in this method
   Vector3 dp = destination - start;  // far do we have to go? 
   float travel_time = dp.Length() / feed_rate;
-
+  travel_time *= 1000; // convert to ms
+  
   // save the start time of this move so we can interpolate linearly over time.
   long start_time = millis();
-  long time_now = start;
+  long time_now = start_time;
 
+  Serial.print(F("length="));
+  Serial.println(dp.Length());
+  Serial.print(F("time="));
+  Serial.println(travel_time);
+  Serial.print(F("feed="));
+  Serial.println(feed_rate);
+  
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
   float f;
   // until the interpolation finishes...
-  while(start_time + time_now < travel_time) {
+  while(time_now - start_time < travel_time) {
     // update the clock
     time_now = millis();
   
@@ -265,21 +270,6 @@ void line(float x,float y,float z) {
   
     // update the inverse kinematics
     ik();
-  
-    // update servo to match the new IK data
-    int nx=(new_angle)*(500.0f/90.0f) + 1500;
-    if(nx>2000) {
-      Serial.println("over max");
-      nx=2000;
-    }
-    if(nx<1000) {
-      Serial.println("under min");
-      nx=1000;
-    }
-    if(arm.angle!=nx) {
-      arm.s.writeMicroseconds(nx);
-      arm.angle=nx;
-    }
   }
 }
 
@@ -411,18 +401,10 @@ void setup() {
   // start serial communications
   Serial.begin(BAUD);
   Serial.println(F("** START **"));
-  
-  // @TODO: this doesn't match the robot setup
-  int i;
-  for(i=0;i<NUM_ARMS;++i) {
-    // connect to the servos
-    arms[i].s.attach(5-i);
-    // center the arm
-    moveArm(i,90);
-  }
 
   setup_robot();
-  line(0,0,0);
+  // @TODO: Is this necessary?
+  //line(0,0,0);
   
   Serial.print(F("> "));
   start = millis();

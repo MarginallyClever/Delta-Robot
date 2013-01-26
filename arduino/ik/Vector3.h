@@ -1,9 +1,14 @@
+#ifndef VECTOR3_H
+#define VECTOR3_H
 //------------------------------------------------------------------------------
 // Delta robot simple communication test
 // dan@marginallycelver.com 2011-06-21
 //------------------------------------------------------------------------------
 // Copyright at end of file.
 // please see http://www.github.com/i-make-robots/Delta-Robot for more information.
+
+
+#include "Arduino.h"
 
 
 class Vector3 {
@@ -14,17 +19,17 @@ public:
   float z;
 
 public:
-  inline Vector3() {}
+  Vector3() {}
 
   
-  inline Vector3( float xx, float yy, float zz ) {
+  Vector3( float xx, float yy, float zz ) {
     x = xx;
     y = yy;
     z = zz;
   }
 
 
-  inline Vector3( float v[ 3 ] ) {
+  Vector3( float v[ 3 ] ) {
     x = v[ 0 ];
     y = v[ 1 ];
     z = v[ 2 ];
@@ -34,7 +39,7 @@ public:
   ~Vector3() {};
 
 
-  inline Vector3 &MakeZero() {
+  Vector3 &MakeZero() {
     x=0;
     y=0;
     z=0;
@@ -43,7 +48,7 @@ public:
   }
 
   
-  inline Vector3 &Set( float xx, float yy, float zz ) {
+  Vector3 &Set( float xx, float yy, float zz ) {
     x = xx;
     y = yy;
     z = zz;
@@ -52,17 +57,17 @@ public:
   }
 
 
-  inline Vector3 operator + () const {  // Unary negation
+  Vector3 operator + () const { // Unary negation
     return Vector3(*this);
   }
 
 
-  inline Vector3 operator - () const {  // Unary negation
+  Vector3 operator - () const { // Unary negation
     return Vector3( -x, -y, -z );
   }
 
 
-  inline Vector3 operator *= ( float v ) {  // assigned multiply by a float
+  Vector3 operator *= ( float v ) { // assigned multiply by a float
     x *= v;
     y *= v;
     z *= v;
@@ -71,7 +76,7 @@ public:
   }
 
 
-  inline Vector3 operator /= ( float t ) {  // assigned division by a float
+  Vector3 operator /= ( float t ) { // assigned division by a float
     float v;
 
     if( t == 0.0f )
@@ -87,7 +92,7 @@ public:
   }
 
 
-  inline Vector3 operator -= ( const Vector3 &v ) {  // assigned subtraction
+  Vector3 operator -= ( const Vector3 &v ) { // assigned subtraction
     x -= v.x;
     y -= v.y;
     z -= v.z;
@@ -96,7 +101,7 @@ public:
   }
 
 
-  inline Vector3 operator += ( const Vector3 &v ) {  // assigned addition
+  Vector3 operator += ( const Vector3 &v ) { // assigned addition
     x += v.x;
     y += v.y;
     z += v.z;
@@ -105,7 +110,7 @@ public:
   }
 
 
-  inline Vector3 operator *= ( const Vector3 &v ) {  // assigned mult.
+  Vector3 operator *= ( const Vector3 &v ) { // assigned mult.
     x *= v.x;
     y *= v.y;
     z *= v.z;
@@ -114,7 +119,7 @@ public:
   }
 
 
-  inline Vector3 operator ^= ( const Vector3 &v ) {  // assigned cross product
+  Vector3 operator ^= ( const Vector3 &v ) { // assigned cross product
     float nx, ny, nz;
     
     nx = ( y * v.z - z * v.y );
@@ -127,33 +132,33 @@ public:
     return *this;
   }
 
+/*
+  bool operator == ( const Vector3 &v ) const {
+    return ( abs( x - v.x ) < 0.01f &&
+             abs( y - v.y ) < 0.01f &&
+             abs( z - v.z ) < 0.01f );
+  }*/
 
-  inline bool operator == ( const Vector3 &v ) const {
-    return ( fabs( x - v.x ) < 0.01f &&
-             fabs( y - v.y ) < 0.01f &&
-             fabs( z - v.z ) < 0.01f );
+/*
+  bool operator != ( const Vector3 &v ) const {
+    return ( abs( x - v.x ) > 0.01f ||
+             abs( y - v.y ) > 0.01f ||
+             abs( z - v.z ) > 0.01f );
+  }*/
+
+
+  // METHODS
+  float Length() const {
+    return (float)sqrt( x*x+y*y+z*z );
   }
 
 
-  inline bool operator != ( const Vector3 &v ) const {
-    return ( fabs( x - v.x ) > 0.01f ||
-             fabs( y - v.y ) > 0.01f ||
-             fabs( z - v.z ) > 0.01f );
+  float LengthSquared() const {
+    return x*x+y*y+z*z;
   }
 
 
-// METHODS
-  inline float Length() const {
-    return (float)sqrt( *this | *this );
-  }
-
-
-  inline float LengthSquared() const {
-    return *this | *this;
-  }
-
-
-  inline void Normalize() {
+  void Normalize() {
     float len, iLen;
 
     len = Length();
@@ -166,7 +171,7 @@ public:
   }
 
 
-  inline float NormalizeLength() {
+  float NormalizeLength() {
     float len, iLen;
 
     len = Length();
@@ -181,28 +186,28 @@ public:
   }
 
 
-  inline void ClampMin( float min ) {  // Clamp to minimum
+  void ClampMin( float min ) { // Clamp to minimum
     if( x < min ) x = min;
     if( y < min ) y = min;
     if( z < min ) z = min;
   }
 
 
-  inline void ClampMax( float max ) {  // Clamp to maximum
+  void ClampMax( float max ) { // Clamp to maximum
     if( x > max ) x = max;
     if( y > max ) y = max;
     if( z > max ) z = max;
   }
 
 
-  inline void Clamp( float min, float max ) {  // Clamp to range ]min,max[
+  void Clamp( float min, float max ) { // Clamp to range ]min,max[
     ClampMin( min );
     ClampMax( max );
   }
 
 
   // Interpolate between *this and v
-  inline void Interpolate( const Vector3 &v, float a ) {
+  void Interpolate( const Vector3 &v, float a ) {
     float b( 1.0f - a );
 
     x = b * x + a * v.x;
@@ -211,12 +216,12 @@ public:
   }
 
 
-  inline float operator | ( const Vector3 &v ) const {  // Dot product
+  float operator | ( const Vector3 &v ) const { // Dot product
     return x * v.x + y * v.y + z * v.z;
   }
 
 
-  inline Vector3 operator / ( float t ) const {  // vector / float
+  Vector3 operator / ( float t ) const { // vector / float
     if( t == 0.0f )
       return Vector3( 0, 0, 0 );
 
@@ -226,65 +231,61 @@ public:
   }
 
 
-  inline Vector3 operator + ( const Vector3 &b ) const {  // vector + vector
+  Vector3 operator + ( const Vector3 &b ) const { // vector + vector
     return Vector3( x + b.x, y + b.y, z + b.z );
   }
 
 
-  inline Vector3 operator - ( const Vector3 &b ) const {  // vector - vector
+  Vector3 operator - ( const Vector3 &b ) const { // vector - vector
     return Vector3( x - b.x, y - b.y, z - b.z );
   }
 
 
-  inline Vector3 operator * ( const Vector3 &b ) const {  // vector * vector
+  Vector3 operator * ( const Vector3 &b ) const { // vector * vector
     return Vector3( x * b.x, y * b.y, z * b.z );
   }
 
 
-  inline Vector3 operator ^ ( const Vector3 &b ) const {  // cross(a,b)
+  Vector3 operator ^ ( const Vector3 &b ) const { // cross(a,b)
     float nx, ny, nz;
 
-    nx =  y * b.z - z * b.y;
-    ny =  z * b.x - x * b.z;
-    nz =  x * b.y - y * b.x;
+    nx = y * b.z - z * b.y;
+    ny = z * b.x - x * b.z;
+    nz = x * b.y - y * b.x;
 
     return Vector3( nx, ny, nz );
   }
 
 
-  inline Vector3 operator * ( float s ) const {
+  Vector3 operator * ( float s ) const {
     return Vector3( x * s, y * s, z * s );
   }
 
+/*
+  void Rotate( Vector3 &axis, float angle ) {
+    float sa = (float)sin( angle );
+    float ca = (float)cos( angle );
+    Vector3 axis2( axis );
+    float m[9];
 
-  inline void Rotate( Vector3 &axis, float angle ) {
-	  float   sa = (float)sin( angle );
-    float   ca = (float)cos( angle );
-	  Vector3 axis2( axis );
-	  float   m[9];
+    axis2.Normalize();
 
-	  axis2.Normalize();
-
-	  m[ 0 ] = ca + (1 - ca) * axis2.x * axis2.x;
-	  m[ 1 ] = (1 - ca) * axis2.x * axis2.y - sa * axis2.z;
-	  m[ 2 ] = (1 - ca) * axis2.z * axis2.x + sa * axis2.y;
-	  m[ 3 ] = (1 - ca) * axis2.x * axis2.y + sa * axis2.z;
-	  m[ 4 ] = ca + (1 - ca) * axis2.y * axis2.y;
-	  m[ 5 ] = (1 - ca) * axis2.y * axis2.z - sa * axis2.x;
-	  m[ 6 ] = (1 - ca) * axis2.z * axis2.x - sa * axis2.y;
-	  m[ 7 ] = (1 - ca) * axis2.y * axis2.z + sa * axis2.x;
-	  m[ 8 ] = ca + (1 - ca) * axis2.z * axis2.z;
+    m[ 0 ] = ca + (1 - ca) * axis2.x * axis2.x;
+    m[ 1 ] = (1 - ca) * axis2.x * axis2.y - sa * axis2.z;
+    m[ 2 ] = (1 - ca) * axis2.z * axis2.x + sa * axis2.y;
+    m[ 3 ] = (1 - ca) * axis2.x * axis2.y + sa * axis2.z;
+    m[ 4 ] = ca + (1 - ca) * axis2.y * axis2.y;
+    m[ 5 ] = (1 - ca) * axis2.y * axis2.z - sa * axis2.x;
+    m[ 6 ] = (1 - ca) * axis2.z * axis2.x - sa * axis2.y;
+    m[ 7 ] = (1 - ca) * axis2.y * axis2.z + sa * axis2.x;
+    m[ 8 ] = ca + (1 - ca) * axis2.z * axis2.z;
 
     Vector3 src( *this );
 
-	  x = m[0] * src.x + m[1] * src.y + m[2] * src.z;
-	  y = m[3] * src.x + m[4] * src.y + m[5] * src.z;
-	  z = m[6] * src.x + m[7] * src.y + m[8] * src.z;
-  }
-
-  inline operator float *() {
-    return &robot.x;
-  }
+    x = m[0] * src.x + m[1] * src.y + m[2] * src.z;
+    y = m[3] * src.x + m[4] * src.y + m[5] * src.z;
+    z = m[6] * src.x + m[7] * src.y + m[8] * src.z;
+  }*/
 };
 
 
@@ -308,4 +309,5 @@ public:
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //------------------------------------------------------------------------------
+#endif
 
