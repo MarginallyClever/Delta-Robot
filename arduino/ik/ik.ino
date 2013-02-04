@@ -15,8 +15,6 @@
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
-const int MAX_ANGLE    = 90+35;
-const int MIN_ANGLE    = 90-80;
 
 // Serial communication bitrate
 const long BAUD        = 57600;
@@ -32,10 +30,18 @@ const int MAX_BUF      = 64;
 #define CM_PER_SEGMENT   (0.50)
 #define MIN_FEED_RATE    (0.01)  // cm/s
 
-static const float center_to_shoulder = 5.753f;  // cm
+const int MAX_ANGLE    = 90+35;
+const int MIN_ANGLE    = 90-80;
 static const float shoulder_to_elbow  = 5;  // cm
 static const float elbow_to_wrist     = 18.5f;  // cm
+
+#if NUM_ARMS == 4
+static const float center_to_shoulder = 5.0f;  // cm
+static const float effector_to_wrist  = 1.59258f+0.635f;  // cm
+#else
+static const float center_to_shoulder = 5.753f;  // cm
 static const float effector_to_wrist  = 1.59258f;  // cm
+#endif
 
 
 //------------------------------------------------------------------------------

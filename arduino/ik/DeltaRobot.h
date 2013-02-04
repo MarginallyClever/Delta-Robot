@@ -12,7 +12,7 @@
 #include "Joint.h"
 
 
-#define NUM_ARMS (3)  // can be 3 or 4.
+#define NUM_ARMS (4)  // can be 3 or 4.
 
 
 struct DeltaRobot {
