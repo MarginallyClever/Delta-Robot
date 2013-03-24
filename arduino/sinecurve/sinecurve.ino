@@ -9,6 +9,10 @@
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
+// Change this to your board type.
+#define BOARD_UNO 1
+//#define BOARD_MEGA 1
+
 const int MAX_ANGLE    = 90+35;
 const int MIN_ANGLE    = 90-80;
 const int MIDDLE_ANGLE = (MAX_ANGLE+MIN_ANGLE)/2;
@@ -17,6 +21,14 @@ const int NUM_ARMS     = 3;
 
 // Serial communication bitrate
 const long BAUD        = 57600;
+
+#ifdef BOARD_UNO
+static const int pins[] = {9,6,5,3};
+#endif
+#ifdef BOARD_MEGA
+static const int pins[] = {5,4,3,2};
+#endif
+
 
 
 //------------------------------------------------------------------------------
@@ -91,7 +103,7 @@ void setup() {
   int i;
   for(i=0;i<NUM_ARMS;++i) {
     // connect to the servos
-    arms[i].s.attach(5-i);
+    arms[i].s.attach(pins[i]);
     // center the arm
     moveArm(i,90);
   }

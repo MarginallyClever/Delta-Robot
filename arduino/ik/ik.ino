@@ -6,15 +6,22 @@
 // please see http://www.github.com/i-make-robots/Delta-Robot for more information.
 
 
+//------------------------------------------------------------------------------
+// includes
+//------------------------------------------------------------------------------
 #include "Vector3.h"
 #include "Joint.h"
 #include "Arm.h"
 #include "DeltaRobot.h"
 #include <Servo.h>
 
+
 //------------------------------------------------------------------------------
 // constants
 //------------------------------------------------------------------------------
+// Change this to your board type.
+#define BOARD_UNO
+//#define BOARD_MEGA
 
 // Serial communication bitrate
 const long BAUD        = 57600;
@@ -43,11 +50,12 @@ static const float center_to_shoulder = 5.753f;  // cm
 static const float effector_to_wrist  = 1.59258f;  // cm
 #endif
 
-
-//------------------------------------------------------------------------------
-// includes
-//------------------------------------------------------------------------------
-#include "DeltaRobot.h"
+#ifdef BOARD_UNO
+static const int pins[] = {9,6,5,3};
+#endif
+#ifdef BOARD_MEGA
+static const int pins[] = {5,4,3,2};
+#endif
 
 
 //------------------------------------------------------------------------------
@@ -111,7 +119,7 @@ void setup_robot() {
     a.wrist.relative.z=0;
     
     // connect to the servos
-    robot.arms[i].s.attach(5-i);
+    robot.arms[i].s.attach(pins[i]);
     // center the arm
     robot.arms[i].s.writeMicroseconds(1500);
   }
