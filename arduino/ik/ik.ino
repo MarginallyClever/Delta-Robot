@@ -121,7 +121,7 @@ void setup_robot() {
     // connect to the servos
     robot.arms[i].s.attach(pins[i]);
     // center the arm
-    robot.arms[i].s.writeMicroseconds(1500);
+    robot.arms[i].s.write(90);
   }
   robot.default_height=bb;
   robot.ee.pos.z=bb;
@@ -223,23 +223,24 @@ void ik() {
     // we don't care about elbow angle, but we could find it here if we needed it.
   
     // update servo to match the new IK data
-    int nx=((new_angle)*(500.0f/90.0f)) + 1500;
+    // 2013-05-17 http://www.marginallyclever.com/forum/viewtopic.php?f=12&t=4707&p=5103#p5091
+    int nx = new_angle + 90;
 /*
     Serial.print(new_angle);
     Serial.print("\t");
     Serial.print(nx);
     Serial.print("\n");
 //*/    
-    if(nx>2000) {
+    if(nx>180) {
       Serial.println("over max");
-      nx=2000;
+      nx=180;
     }
-    if(nx<1000) {
+    if(nx<0) {
       Serial.println("under min");
-      nx=1000;
+      nx=0;
     }
     if(arm.angle!=nx) {
-      arm.s.writeMicroseconds(nx);
+      arm.s.write(nx);
       arm.angle=nx;
     }
   }
