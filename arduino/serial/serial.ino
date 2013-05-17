@@ -79,7 +79,7 @@ void moveArm(int id,float angle) {
   
   arms[id].a=angle;
   // convert range 180-0 to 2000-1000
-  arms[id].s.writeMicroseconds((int)( (angle * 1000.0/180.0 ) + 1000.0));
+  arms[id].s.write(angle);
 }
 
 
