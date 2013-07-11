@@ -37,8 +37,6 @@ const int MAX_BUF      = 64;
 #define CM_PER_SEGMENT   (0.50)
 #define MIN_FEED_RATE    (0.01)  // cm/s
 
-const int MAX_ANGLE    = 90+35;
-const int MIN_ANGLE    = 90-80;
 static const float shoulder_to_elbow  = 5;  // cm
 static const float elbow_to_wrist     = 18.5f;  // cm
 
@@ -58,6 +56,7 @@ static const int pins[] = {5,4,3,2};
 #endif
 
 
+
 //------------------------------------------------------------------------------
 // globals
 //------------------------------------------------------------------------------
@@ -71,6 +70,13 @@ int sofar;
 DeltaRobot robot;
 float feed_rate=10;  // how fast the tool moves in cm/s
 
+// did you put it together backwards?
+// @TODO: store this in EEPROM
+int reverse=0;
+
+// @TODO: customize these per-arm?
+int MAX_ANGLE    = 90+85;
+int MIN_ANGLE    = 90-30;
 
 //------------------------------------------------------------------------------
 // methods
@@ -163,6 +169,29 @@ void printEEPosition() {
 
 
 /**
+ * sets a servo to a given angle.
+ * @param angle [0...180].
+ */
+void moveArm(int id,float newAngle) {
+  Arm &arm=robot.arms[id];
+    
+  if(arm.angle==newAngle) return;
+
+  if(newAngle>MAX_ANGLE) {
+    Serial.println("over max");
+    newAngle=MAX_ANGLE;
+  }
+  if(newAngle<MIN_ANGLE) {
+    Serial.println("under min");
+    newAngle=MIN_ANGLE;
+  }
+
+  arm.s.write(newAngle);
+  arm.angle=newAngle;
+}
+
+
+/**
  * inverse kinematics for each leg.  if you know the wrist, it finds the shoulder angle(s).
  */
 void ik() {
@@ -224,25 +253,14 @@ void ik() {
   
     // update servo to match the new IK data
     // 2013-05-17 http://www.marginallyclever.com/forum/viewtopic.php?f=12&t=4707&p=5103#p5091
-    int nx = new_angle + 90;
+    int nx = 90 +  ( (reverse==1) ? new_angle : -new_angle );
 /*
     Serial.print(new_angle);
     Serial.print("\t");
     Serial.print(nx);
     Serial.print("\n");
-//*/    
-    if(nx>180) {
-      Serial.println("over max");
-      nx=180;
-    }
-    if(nx<0) {
-      Serial.println("under min");
-      nx=0;
-    }
-    if(arm.angle!=nx) {
-      arm.s.write(nx);
-      arm.angle=nx;
-    }
+//*/
+    moveArm(i,nx);
   }
 }
 
@@ -403,6 +421,44 @@ void help() {
 }
 
 
+void testArm(int id) {
+  float oldAngle = robot.arms[id].angle;
+  
+  moveArm(id,MIN_ANGLE);
+  delay(500);
+  moveArm(id,MAX_ANGLE);
+  delay(500);
+  moveArm(id,MIN_ANGLE);
+  delay(500);
+  moveArm(id,MAX_ANGLE);
+  delay(500);
+  moveArm(id,oldAngle);
+  delay(500);
+}
+
+
+void testWave() {
+  // sine curve from MIN_ANGLE to MAX_ANGLE over time.
+  float speedup=2;
+
+  int HALF_RANGE = ( MAX_ANGLE + MIN_ANGLE ) / 2;
+  int MIDDLE_ANGLE = MIN_ANGLE + HALF_RANGE;
+  
+  while(1) {
+    float t=millis()*0.001f;
+    
+    int i;
+    for(i=0;i<NUM_ARMS;++i) {
+      Serial.print(i==0?F("\n"):F("\t"));
+      moveArm( i, (float)MIDDLE_ANGLE + 
+         sin( t*speedup + (PI*2.0)*(float)i/(float)NUM_ARMS ) * (float)HALF_RANGE * sin(t/5.0) );
+    }
+    
+    delay(10);
+  }
+}
+
+
 /**
  * process instructions waiting in the serial buffer
  */
@@ -410,7 +466,14 @@ void processCommand() {
   if(!strncmp(buffer,"M114",4)) {
     // get position
     printEEPosition();
-  } else if( !strncmp(buffer,"G00",3) || !strncmp(buffer,"G01",3) ) {
+  } else if( !strncmp(buffer,"REVERSE",7)) {
+    reverse = (reverse==1) ? 0 : 1;
+  } else if( !strncmp(buffer,"TEST0",5)) testArm(0);
+  else if( !strncmp(buffer,"TEST1",5)) testArm(1);
+  else if( !strncmp(buffer,"TEST2",5)) testArm(2);
+  else if( !strncmp(buffer,"TEST3",5)) testArm(3);
+  else if( !strncmp(buffer,"TESTWAVE",8)) testWave();
+  else if( !strncmp(buffer,"G00",3) || !strncmp(buffer,"G01",3) ) {
     // line
     float xx=robot.ee.pos.x;
     float yy=robot.ee.pos.y;
