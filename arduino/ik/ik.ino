@@ -451,7 +451,7 @@ void testWave() {
     for(i=0;i<NUM_ARMS;++i) {
       Serial.print(i==0?F("\n"):F("\t"));
       moveArm( i, (float)MIDDLE_ANGLE + 
-         sin( t*speedup + (PI*2.0)*(float)i/(float)NUM_ARMS ) * (float)HALF_RANGE * sin(t/5.0) );
+         sin( t*speedup + (PI*2.0)*(float)i/(float)NUM_ARMS ) * (float)HALF_RANGE );
     }
     
     delay(10);
