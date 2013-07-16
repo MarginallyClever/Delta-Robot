@@ -439,21 +439,24 @@ void testArm(int id) {
 
 void testWave() {
   // sine curve from MIN_ANGLE to MAX_ANGLE over time.
-  float speedup=2;
+  float speedup=0.5;
 
   int HALF_RANGE = ( MAX_ANGLE + MIN_ANGLE ) / 2;
   int MIDDLE_ANGLE = MIN_ANGLE + HALF_RANGE;
   
   while(1) {
     float t=millis()*0.001f;
-    
+    /*
     int i;
     for(i=0;i<NUM_ARMS;++i) {
       Serial.print(i==0?F("\n"):F("\t"));
       moveArm( i, (float)MIDDLE_ANGLE + 
          sin( t*speedup + (PI*2.0)*(float)i/(float)NUM_ARMS ) * (float)HALF_RANGE );
     }
-    
+    */
+    line_safe( 10.0 * sin( t*speedup ),
+               10.0 * cos( t*speedup ),
+               robot.default_height );
     delay(10);
   }
 }
