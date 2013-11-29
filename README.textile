@@ -1,8 +1,9 @@
 h1. Delta Robot - A kinematic linkage robot for students
 
-This is a scale model of a Delta robot.  They are typically used for pick-and-place jobs on assembly lines.
+This is a small scale Delta robot.  They are typically used for pick-and-place jobs on assembly lines.
 A perfect example is a machine that takes candy bars from an assembly line and packs them into boxes without
-contaminating the "food".  There's also the Rostock, a 3D printer that puts the print head on a Delta Robot.
+contaminating the "food".  They are also used in 3D printers like the Rostock or the Kossel.
+
 Here are some questions you can answer with this robot:
 
 Why are parallelograms useful?
@@ -15,6 +16,13 @@ What are (Inverse and Forward) Kinematics?
 What is a Work Envelope?
 
 This robot works just as well upside down as right side up.
+
+h2. Notes
+
+v1 is our original model made with hobby servos and 3D printed parts.  It is kept here for historical reasons.
+
+v8 uses stepper motors and 2x Adafruit motor shield v2 for very high accuracy.
+It also comes with a frame for easier setup and use.
 
 Please visit "Marginally Clever":http://www.marginallyclever.com/shop/ for the accompanying hardware kit.
 
