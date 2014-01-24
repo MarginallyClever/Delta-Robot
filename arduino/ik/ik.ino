@@ -202,16 +202,16 @@ void ik() {
 
     // get wrist position
     arm.wrist.pos = robot.ee.pos + arm.wrist.relative;
-    Vector3 w = arm.wrist.pos - arm.shoulder.pos;
-    Vector3 n=arm.shoulder.pos;
-    n.z=0;
-    n.Normalize();
-    Vector3 ortho(-n.y,n.x,0);
+    Vector3 ortho=arm.shoulder.pos;
+    ortho.z=0;
     ortho.Normalize();
+    Vector3 (-ortho.y,ortho.x,0);
+    BACKWARDS.Normalize();
 
     // get wrist position on plane of bicep
-    float a=w | ortho;  // ee' distance
-    Vector3 wop = w - ortho * a;
+    Vector3 w = arm.wrist.pos - arm.shoulder.pos;
+    float a=w | BACKWARDS;  // ee' distance
+    Vector3 wop = w - BACKWARDS * a;
     arm.wop.pos=wop + arm.shoulder.pos;
     
     // use pythagorean theorem to get e'j
@@ -225,13 +225,13 @@ void ik() {
     // distance from shoulder to the midpoint between the two possible intersections
     a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2*d );
     // find the midpoint
-    n=wop;
-    n.Normalize();
-    Vector3 temp=arm.shoulder.pos+(n*a);
+    Vector3 n2=wop;
+    n2.Normalize();
+    Vector3 temp=arm.shoulder.pos+(n2*a);
     // with a and r0 we can find h, the distance from midpoint to intersections.
     float h=sqrt(r0*r0-a*a);
     // get a normal to the line wop in the plane orthogonal to ortho
-    Vector3 r = ortho ^ n;
+    Vector3 r = BACKWARDS ^ n2;
     Vector3 p1 = temp + r * h;
     
     arm.elbow.pos=p1;
