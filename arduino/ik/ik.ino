@@ -205,13 +205,13 @@ void ik() {
     Vector3 ortho=arm.shoulder.pos;
     ortho.z=0;
     ortho.Normalize();
-    Vector3 (-ortho.y,ortho.x,0);
-    BACKWARDS.Normalize();
+    Vector3 norm(-ortho.y,ortho.x,0);
+    norm.Normalize();
 
     // get wrist position on plane of bicep
     Vector3 w = arm.wrist.pos - arm.shoulder.pos;
-    float a=w | BACKWARDS;  // ee' distance
-    Vector3 wop = w - BACKWARDS * a;
+    float a=w | norm;  // ee' distance
+    Vector3 wop = w - norm * a;
     arm.wop.pos=wop + arm.shoulder.pos;
     
     // use pythagorean theorem to get e'j
@@ -231,7 +231,7 @@ void ik() {
     // with a and r0 we can find h, the distance from midpoint to intersections.
     float h=sqrt(r0*r0-a*a);
     // get a normal to the line wop in the plane orthogonal to ortho
-    Vector3 r = BACKWARDS ^ n2;
+    Vector3 r = norm ^ n2;
     Vector3 p1 = temp + r * h;
     
     arm.elbow.pos=p1;
